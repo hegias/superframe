@@ -33,24 +33,20 @@ AFRAME.registerComponent('orbit-controls', {
 
   init: function () {
     var el = this.el;
-    var oldPosition;
 
-    oldPosition = new THREE.Vector3();
+    // MP Moved up (before was at the bottom of init) because reset was not considering initialPosition	
+    el.getObject3D('camera').position.copy(this.data.initialPosition);	
+    // END MP	
+    this.controls = new THREE.OrbitControls(el.getObject3D('camera'),	
+    el.sceneEl.renderer.domElement);	
+    this.oldPosition = new THREE.Vector3();	
 
     this.bindMethods();
-    el.sceneEl.addEventListener('enter-vr', this.onEnterVR);
-    el.sceneEl.addEventListener('exit-vr', this.onExitVR);
 
     document.body.style.cursor = 'grab';
-    document.addEventListener('mousedown', () => {
-      document.body.style.cursor = 'grabbing';
-    });
-    document.addEventListener('mouseup', () => {
-      document.body.style.cursor = 'grab';
-    });
 
     this.target = new THREE.Vector3();
-    el.getObject3D('camera').position.copy(this.data.initialPosition);
+    this.addEventListeners();
   },
 
   pause: function () {
@@ -63,6 +59,19 @@ AFRAME.registerComponent('orbit-controls', {
     this.update();
   },
 
+  addEventListeners() {	
+    this.el.sceneEl.addEventListener('enter-vr', this.onEnterVR);	
+    this.el.sceneEl.addEventListener('exit-vr', this.onExitVR);	
+    document.addEventListener('mousedown', this.onMouseDown);	
+    document.addEventListener('mouseup', this.onMouseUp);	
+  },	
+  removeEventListeners() {	
+    this.el.sceneEl.removeEventListener('enter-vr', this.onEnterVR);	
+    this.el.sceneEl.removeEventListener('exit-vr', this.onExitVR);	
+    document.removeEventListener('mousedown', this.onMouseDown);	
+    document.removeEventListener('mouseup', this.onMouseUp);	
+  },
+
   onEnterVR: function() {
     var el = this.el;
 
@@ -71,7 +80,7 @@ AFRAME.registerComponent('orbit-controls', {
     this.controls.enabled = false;
     if (el.hasAttribute('look-controls')) {
       el.setAttribute('look-controls', 'enabled', true);
-      oldPosition.copy(el.getObject3D('camera').position);
+      this.oldPosition.copy(el.getObject3D('camera').position);
       el.getObject3D('camera').position.set(0, 0, 0);
     }
   },
@@ -82,15 +91,22 @@ AFRAME.registerComponent('orbit-controls', {
     if (!AFRAME.utils.device.checkHeadsetConnected() &&
         !AFRAME.utils.device.isMobile()) { return; }
     this.controls.enabled = true;
-    el.getObject3D('camera').position.copy(oldPosition);
+    el.getObject3D('camera').position.copy(this.oldPosition);
     if (el.hasAttribute('look-controls')) {
       el.setAttribute('look-controls', 'enabled', false);
     }
   },
-
+  onMouseDown() {	
+    document.body.style.cursor = 'grabbing';	
+  },	
+  onMouseUp() {	
+    document.body.style.cursor = 'grab';
+  },
   bindMethods: function() {
     this.onEnterVR = bind(this.onEnterVR, this);
     this.onExitVR = bind(this.onExitVR, this);
+    this.onMouseDown = this.onMouseDown.bind(this);	
+    this.onMouseUp = this.onMouseUp.bind(this);
   },
 
   update: function (oldData) {
@@ -132,11 +148,14 @@ AFRAME.registerComponent('orbit-controls', {
     }
   },
 
+  reset() {	
+    this.controls.reset();	
+    },
+
   remove: function() {
     this.controls.reset();
     this.controls.dispose();
 
-    this.el.sceneEl.removeEventListener('enter-vr', this.onEnterVR);
-    this.el.sceneEl.removeEventListener('exit-vr', this.onExitVR);
+    this.removeEventListeners();
   }
 });

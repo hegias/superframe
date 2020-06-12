@@ -74,7 +74,25 @@ THREE.OrbitControls = function ( object, domElement ) {
 
 	// Mouse buttons
 	this.mouseButtons = { ORBIT: THREE.MOUSE.LEFT, ZOOM: THREE.MOUSE.MIDDLE, PAN: THREE.MOUSE.RIGHT };
-
+	// MP mouse state	
+	this.MOUSE_KEYS = {	
+		NONE: 0, // 0000	
+		LEFT: 1, // 0001	
+		RIGHT: 2, // 0010	
+		MIDDLE: 4, // 0100	
+	};	
+	this.mouseStates = {	
+	[THREE.MOUSE.LEFT]: this.MOUSE_KEYS.LEFT,	
+	[THREE.MOUSE.RIGHT]: this.MOUSE_KEYS.RIGHT,	
+	[THREE.MOUSE.MIDDLE]: this.MOUSE_KEYS.MIDDLE,	
+	};	
+	this.mouseState = this.MOUSE_KEYS.NONE;	
+	this.prevMouseState = this.mouseState;	
+	// END MP	
+	// MP track timestap for doubleclick	
+	this.timeStamp = 0;	
+	this.doubleClickTime = 500; // default in windows is 500 ms (source: wikipedia)	
+	// END MP
 	// for reset
 	this.target0 = this.target.clone();
 	this.position0 = this.object.position.clone();
@@ -227,8 +245,10 @@ THREE.OrbitControls = function ( object, domElement ) {
 		scope.domElement.removeEventListener( 'touchmove', onTouchMove, false );
 
 		document.removeEventListener( 'mousemove', onMouseMove, false );
-		document.removeEventListener( 'mouseup', onMouseUp, false );
-
+		// document.removeEventListener( 'mouseup', onMouseUp, false );
+		// MP changed document in scope.domElement for mouseup working outside scene
+		scope.domElement.removeEventListener('mouseup', onMouseUp, false);	
+		// END MP
 		window.removeEventListener( 'keydown', onKeyDown, false );
 
 		//scope.dispatchEvent( { type: 'dispose' } ); // should this be added here?
@@ -245,7 +265,7 @@ THREE.OrbitControls = function ( object, domElement ) {
 	var startEvent = { type: 'start' };
 	var endEvent = { type: 'end' };
 
-	var STATE = { NONE: - 1, ROTATE: 0, DOLLY: 1, PAN: 2, TOUCH_ROTATE: 3, TOUCH_DOLLY: 4, TOUCH_PAN: 5 };
+	var STATE = { NONE: - 1, ROTATE: 0, DOLLY: 1, PAN: 2, TOUCH_ROTATE: 3, TOUCH_DOLLY: 4, TOUCH_PAN: 5, RESET: 6};
 
 	var state = STATE.NONE;
 
@@ -662,6 +682,13 @@ THREE.OrbitControls = function ( object, domElement ) {
 
 		event.preventDefault();
 
+		// MP keep track of pressed mouse keys	
+		scope.mouseState |= scope.mouseStates[event.button];	
+		// add double click handler	
+		const doubleClick = scope.mouseState === scope.prevMouseState && event.timeStamp - scope.timeStamp < scope.doubleClickTime;	
+		scope.timeStamp = event.timeStamp;	
+		// END MP
+
 		switch ( event.button ) {
 
 			case scope.mouseButtons.ORBIT:
@@ -676,12 +703,15 @@ THREE.OrbitControls = function ( object, domElement ) {
 
 			case scope.mouseButtons.ZOOM:
 
-				if ( scope.enableZoom === false ) return;
-
-				handleMouseDownDolly( event );
-
-				state = STATE.DOLLY;
-
+				// MP disable zoom for middle click in favor of	
+				// // uncommend below to reenable zoom	
+				// if (scope.enableZoom === false) return;	
+				// handleMouseDownDolly(event);	
+				// state = STATE.DOLLY;	
+				// //	
+				// REMARK: using this variable instead of directly call reset because it changes state and mouseUp will to not work as expected	
+				state = STATE.RESET;	
+				// END MP
 				break;
 
 			case scope.mouseButtons.PAN:
@@ -699,10 +729,15 @@ THREE.OrbitControls = function ( object, domElement ) {
 		if ( state !== STATE.NONE ) {
 
 			document.addEventListener( 'mousemove', onMouseMove, false );
-			document.addEventListener( 'mouseup', onMouseUp, false );
-
+			// document.addEventListener( 'mouseup', onMouseUp, false );
+			// MP changed document in scope.domElement	
+			scope.domElement.addEventListener('mouseup', onMouseUp, false);	
+			// END MP
 			scope.dispatchEvent( startEvent );
-
+		}	
+		// MP checking reset option here as mentioned before to not change internal state	
+		if (state === STATE.RESET && doubleClick) {	
+			scope.reset();
 		}
 
 	}
@@ -746,12 +781,17 @@ THREE.OrbitControls = function ( object, domElement ) {
 	function onMouseUp( event ) {
 
 		if ( scope.enabled === false ) return;
-
+		// MP keep track of pressed mouse keys	
+		scope.prevMouseState = scope.mouseState;	
+		scope.mouseState &= ~(scope.mouseStates[event.button]);	
+		// END MP
 		handleMouseUp( event );
 
 		document.removeEventListener( 'mousemove', onMouseMove, false );
-		document.removeEventListener( 'mouseup', onMouseUp, false );
-
+		// document.removeEventListener( 'mouseup', onMouseUp, false );
+		// MP changed document in scope.domElement	
+		scope.domElement.removeEventListener('mouseup', onMouseUp, false);	
+		// END MP
 		scope.dispatchEvent( endEvent );
 
 		state = STATE.NONE;
@@ -763,7 +803,7 @@ THREE.OrbitControls = function ( object, domElement ) {
 		if ( scope.enabled === false || scope.enableZoom === false || ( state !== STATE.NONE && state !== STATE.ROTATE ) ) return;
 
 		event.preventDefault();
-
+		event.stopPropagation();
 		scope.dispatchEvent( startEvent );
 
 		handleMouseWheel( event );
@@ -835,7 +875,7 @@ THREE.OrbitControls = function ( object, domElement ) {
 		if ( scope.enabled === false ) return;
 
 		event.preventDefault();
-
+		event.stopPropagation();
 		switch ( event.touches.length ) {
 
 			case 1: // one-fingered touch: rotate
