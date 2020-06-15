@@ -61,13 +61,13 @@ AFRAME.registerComponent('orbit-controls', {
     this.el.sceneEl.addEventListener('enter-vr', this.onEnterVR);	
     this.el.sceneEl.addEventListener('exit-vr', this.onExitVR);	
     document.addEventListener('mousedown', this.onMouseDown);	
-    document.addEventListener('mouseup', this.onMouseUp);	
+    window.addEventListener('mouseup', this.onMouseUp);	
   },	
   removeEventListeners() {	
     this.el.sceneEl.removeEventListener('enter-vr', this.onEnterVR);	
     this.el.sceneEl.removeEventListener('exit-vr', this.onExitVR);	
     document.removeEventListener('mousedown', this.onMouseDown);	
-    document.removeEventListener('mouseup', this.onMouseUp);	
+    window.removeEventListener('mouseup', this.onMouseUp);	
   },
 
   onEnterVR: function() {
