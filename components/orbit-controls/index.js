@@ -37,8 +37,6 @@ AFRAME.registerComponent('orbit-controls', {
     // MP Moved up (before was at the bottom of init) because reset was not considering initialPosition	
     el.getObject3D('camera').position.copy(this.data.initialPosition);	
     // END MP	
-    this.controls = new THREE.OrbitControls(el.getObject3D('camera'),	
-    el.sceneEl.renderer.domElement);	
     this.oldPosition = new THREE.Vector3();	
 
     this.bindMethods();
