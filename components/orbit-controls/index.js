@@ -135,6 +135,17 @@ AFRAME.registerComponent('orbit-controls', {
     controls.rotateSpeed = data.rotateSpeed;
     controls.screenSpacePanning = data.screenSpacePanning;
     controls.zoomSpeed = data.zoomSpeed;
+
+    if (oldData) {
+      // equals from Vector3 does not work because oldData is not a THREE.Vector3
+      if (
+        oldData.initialPosition.x !== data.initialPosition.x
+        || oldData.initialPosition.y !== data.initialPosition.y
+        || oldData.initialPosition.z !== data.initialPosition.z
+      ) {
+        this.el.getObject3D('camera').position.copy(data.initialPosition);
+      }
+    }
   },
 
   tick: function () {
