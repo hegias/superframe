@@ -49,12 +49,18 @@ AFRAME.registerComponent('orbit-controls', {
 
   pause: function () {
     this.controls.dispose();
+    this.removeEventListeners()
   },
 
   play: function () {
     const el = this.el;
-    this.controls = new THREE.OrbitControls(el.getObject3D('camera'), el.sceneEl.renderer.domElement);
-    this.update();
+    if(!this.controls){
+      this.controls = new THREE.OrbitControls(el.getObject3D('camera'), el.sceneEl.renderer.domElement);
+      this.update();
+    } else {
+      this.controls.addEventListeners();
+      this.addEventListeners();
+    }
   },
 
   addEventListeners() {	
