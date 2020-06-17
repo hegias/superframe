@@ -247,13 +247,31 @@ THREE.OrbitControls = function ( object, domElement ) {
 		document.removeEventListener( 'mousemove', onMouseMove, false );
 		// document.removeEventListener( 'mouseup', onMouseUp, false );
 		// MP changed document in scope.domElement for mouseup working outside scene
-		scope.domElement.removeEventListener('mouseup', onMouseUp, false);	
+		// scope.domElement.removeEventListener('mouseup', onMouseUp, false);	
 		// END MP
 		window.removeEventListener( 'keydown', onKeyDown, false );
 
 		//scope.dispatchEvent( { type: 'dispose' } ); // should this be added here?
-
+		state = STATE.NONE;
+		this.mouseState = this.MOUSE_KEYS.NONE;	
+		this.prevMouseState = this.mouseState;	
 	};
+
+	this.addEventListeners = function () {
+		scope.domElement.addEventListener( 'contextmenu', onContextMenu, false );
+		scope.domElement.addEventListener( 'mousedown', onMouseDown, false );
+		scope.domElement.addEventListener( 'wheel', onMouseWheel, false );
+
+		scope.domElement.addEventListener( 'touchstart', onTouchStart, false );
+		scope.domElement.addEventListener( 'touchend', onTouchEnd, false );
+		scope.domElement.addEventListener( 'touchmove', onTouchMove, false );
+
+		// document.addEventListener( 'mousemove', onMouseMove, false );
+		// MP changed document in scope.domElement for mouseup working outside scene
+			
+		// END MP
+		window.addEventListener( 'keydown', onKeyDown, false );
+	}
 
 	//
 	// internals
@@ -731,7 +749,7 @@ THREE.OrbitControls = function ( object, domElement ) {
 			document.addEventListener( 'mousemove', onMouseMove, false );
 			// document.addEventListener( 'mouseup', onMouseUp, false );
 			// MP changed document in scope.domElement	
-			scope.domElement.addEventListener('mouseup', onMouseUp, false);	
+			window.addEventListener('mouseup', onMouseUp, false);	
 			// END MP
 			scope.dispatchEvent( startEvent );
 		}	
@@ -790,7 +808,7 @@ THREE.OrbitControls = function ( object, domElement ) {
 		document.removeEventListener( 'mousemove', onMouseMove, false );
 		// document.removeEventListener( 'mouseup', onMouseUp, false );
 		// MP changed document in scope.domElement	
-		scope.domElement.removeEventListener('mouseup', onMouseUp, false);	
+		window.removeEventListener('mouseup', onMouseUp, false);	
 		// END MP
 		scope.dispatchEvent( endEvent );
 
