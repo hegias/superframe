@@ -97,6 +97,92 @@ THREE.OrbitControls = function ( object, domElement ) {
 	this.target0 = this.target.clone();
 	this.position0 = this.object.position.clone();
 	this.zoom0 = this.object.zoom;
+	this.worldPosition = new THREE.Vector3();
+
+	// #region MP Pivot data
+
+	const getGeometryByData = (geometry, size) => {
+		if (geometry === 'box') {
+			return new THREE.BoxBufferGeometry(size, size, size);
+		}
+		// sphere default
+		return new THREE.SphereBufferGeometry(size, 8, 8);
+	};
+
+	const createPivot = (pivotData) => {
+		const pivotGeometry = getGeometryByData(pivotData.geometry, pivotData.size);
+		const pivotMaterial = new THREE.MeshBasicMaterial({
+			'color': pivotData.color,
+			'opacity': 0.7,
+			'transparent': true,
+			'depthTest': false
+		});
+		this.pivotGroup = new THREE.Mesh(pivotGeometry, pivotMaterial);
+
+		this.pivot = new THREE.Object3D();
+		this.pivot.add(this.pivotGroup);
+		object.el.sceneEl.object3D.add(this.pivot);
+	};
+
+	const deletePivot = () => {
+		if (!this.pivot) {
+			return;
+		}
+		
+		if (this.pivotTimeout) {
+			clearTimeout(this.pivotTimeout);
+			pivotTimeout = undefined;
+		}
+
+		object.el.sceneEl.object3D.remove(this.pivot);
+		this.pivot.traverse((o) => {
+			if (o.geometry) {
+				o.geometry.dispose();
+			}
+			if (o.material) {
+				o.material.dispose();
+			}
+		});
+	};
+
+	this.pivotVisibleRoutine = () => {
+		if (!this.pivot) {
+			return;
+		}
+
+		if (this.pivotTimeout) {
+			clearTimeout(this.pivotTimeout);
+			pivotTimeout = undefined;
+		}
+		// this.pivot.visible = true;
+		this.pivotTimeout = setTimeout(() => {
+			this.pivot.visible = false;
+			this.pivotTimeout = undefined;
+		}, this.pivotTimer);
+	};
+
+	this.setPivot = (pivotData) => {
+		if(this.pivot) {
+			deletePivot();
+		}
+		
+		this.pivotTimer = pivotData.time;
+
+		if (pivotData.geometry === 'custom') {
+			return;
+		}
+
+		createPivot(pivotData);
+
+		this.pivotVisibleRoutine(this.pivotTimer);
+	};
+
+	this.setCustomPivot = (pivot) => {
+		this.pivot = pivot;
+		object.el.sceneEl.object3D.add(this.pivot);
+		this.pivotVisibleRoutine(this.pivotTimer);
+	};
+	// #endregion
 
 	//
 	// public methods
@@ -196,6 +282,14 @@ THREE.OrbitControls = function ( object, domElement ) {
 
 			scope.object.lookAt( scope.target );
 
+			scope.object.getWorldPosition(this.worldPosition);
+
+			// MP update pivot position
+			if ( scope.pivot ) {
+				scope.pivot.position.copy(scope.target);
+				scope.pivot.lookAt(this.worldPosition);
+			}
+
 			if ( scope.enableDamping === true ) {
 
 				sphericalDelta.theta *= ( 1 - scope.dampingFactor );
@@ -254,7 +348,9 @@ THREE.OrbitControls = function ( object, domElement ) {
 		//scope.dispatchEvent( { type: 'dispose' } ); // should this be added here?
 		state = STATE.NONE;
 		this.mouseState = this.MOUSE_KEYS.NONE;	
-		this.prevMouseState = this.mouseState;	
+		this.prevMouseState = this.mouseState;
+		
+		deletePivot();
 	};
 
 	this.addEventListeners = function () {
@@ -470,6 +566,11 @@ THREE.OrbitControls = function ( object, domElement ) {
 
 		//console.log( 'handleMouseDownPan' );
 
+		// MP enable pivot visualization
+		if (scope.pivot) {
+			scope.pivot.visible = true;
+		}
+
 		panStart.set( event.clientX, event.clientY );
 
 	}
@@ -537,7 +638,12 @@ THREE.OrbitControls = function ( object, domElement ) {
 
 	function handleMouseUp( event ) {
 
-		// console.log( 'handleMouseUp' );
+		//console.log( 'handleMouseUp' );
+
+		// MP show pivot on pan start => this should be check with a centralized state change manager, to put this only one time and not for every xdown event
+		if (event.button === scope.mouseButtons.PAN) {
+			scope.pivotVisibleRoutine(scope.pivotTimer);
+		}
 
 	}
 
@@ -797,7 +903,10 @@ THREE.OrbitControls = function ( object, domElement ) {
 	}
 
 	function onMouseUp( event ) {
-
+		// HACK to avoid event without button property
+		if (!(event instanceof MouseEvent)) {
+			return;
+		}
 		if ( scope.enabled === false ) return;
 		// MP keep track of pressed mouse keys	
 		scope.prevMouseState = scope.mouseState;	

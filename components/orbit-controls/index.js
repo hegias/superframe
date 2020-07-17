@@ -28,7 +28,24 @@ AFRAME.registerComponent('orbit-controls', {
     rotateSpeed: {default: 0.05},
     screenSpacePanning: {default: false},
     target: {type: 'vec3'},
-    zoomSpeed: {default: 0.5}
+    zoomSpeed: {default: 0.5},
+    pivot: {
+      default: null,
+      parse: (value) => {
+        try {
+          return JSON.parse(value);
+        } catch {
+          return null;
+        }
+      },
+      stringify: (value) => {
+        try {
+          return JSON.stringify(value);
+        } catch {
+          return JSON.stringify(null);
+        }
+      }
+    }
   },
 
   init: function () {
@@ -40,6 +57,9 @@ AFRAME.registerComponent('orbit-controls', {
     this.oldPosition = new THREE.Vector3();	
 
     this.bindMethods();
+
+    // MP initialize pivotData to avoid wrong diff in update
+    this.pivotData = null;
 
     document.body.style.cursor = 'grab';
 
@@ -152,6 +172,15 @@ AFRAME.registerComponent('orbit-controls', {
         this.el.getObject3D('camera').position.copy(data.initialPosition);
       }
     }
+
+    if (!AFRAME.utils.deepEqual(this.pivotData, this.data.pivot)) {
+      this.pivotData = {...this.pivotData, ...this.data.pivot};
+      this.controls.setPivot(this.pivotData);
+    }
+  },
+
+  setCustomPivot(pivot) {
+    this.controls.setCustomPivot(pivot);
   },
 
   tick: function () {
@@ -165,7 +194,7 @@ AFRAME.registerComponent('orbit-controls', {
 
   reset() {	
     this.controls.reset();	
-    },
+  },
 
   remove: function() {
     this.controls.reset();
