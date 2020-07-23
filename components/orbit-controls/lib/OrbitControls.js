@@ -145,7 +145,7 @@ THREE.OrbitControls = function ( object, domElement ) {
 		});
 	};
 
-	this.pivotVisibleRoutine = () => {
+	this.pivotVisibleRoutine = (visible) => {
 		if (!this.pivot) {
 			return;
 		}
@@ -154,11 +154,15 @@ THREE.OrbitControls = function ( object, domElement ) {
 			clearTimeout(this.pivotTimeout);
 			pivotTimeout = undefined;
 		}
-		// this.pivot.visible = true;
-		this.pivotTimeout = setTimeout(() => {
-			this.pivot.visible = false;
-			this.pivotTimeout = undefined;
-		}, this.pivotTimer);
+
+		if (visible) {
+			this.pivot.visible = true;
+		} else {
+			this.pivotTimeout = setTimeout(() => {
+				this.pivot.visible = false;
+				this.pivotTimeout = undefined;
+			}, this.pivotTimer);
+		}
 	};
 
 	this.setPivot = (pivotData) => {
@@ -174,13 +178,13 @@ THREE.OrbitControls = function ( object, domElement ) {
 
 		createPivot(pivotData);
 
-		this.pivotVisibleRoutine(this.pivotTimer);
+		this.pivotVisibleRoutine(false);
 	};
 
 	this.setCustomPivot = (pivot) => {
 		this.pivot = pivot;
 		object.el.sceneEl.object3D.add(this.pivot);
-		this.pivotVisibleRoutine(this.pivotTimer);
+		this.pivotVisibleRoutine(false);
 	};
 	// #endregion
 
@@ -568,7 +572,7 @@ THREE.OrbitControls = function ( object, domElement ) {
 
 		// MP enable pivot visualization
 		if (scope.pivot) {
-			scope.pivot.visible = true;
+			scope.pivotVisibleRoutine(true);
 		}
 
 		panStart.set( event.clientX, event.clientY );
@@ -642,7 +646,7 @@ THREE.OrbitControls = function ( object, domElement ) {
 
 		// MP show pivot on pan start => this should be check with a centralized state change manager, to put this only one time and not for every xdown event
 		if (event.button === scope.mouseButtons.PAN) {
-			scope.pivotVisibleRoutine(scope.pivotTimer);
+			scope.pivotVisibleRoutine(false);
 		}
 
 	}
