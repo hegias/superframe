@@ -97,7 +97,6 @@ THREE.OrbitControls = function ( object, domElement ) {
 	this.target0 = this.target.clone();
 	this.position0 = this.object.position.clone();
 	this.zoom0 = this.object.zoom;
-	this.worldPosition = new THREE.Vector3();
 
 	// #region MP Pivot data
 
@@ -286,12 +285,9 @@ THREE.OrbitControls = function ( object, domElement ) {
 
 			scope.object.lookAt( scope.target );
 
-			scope.object.getWorldPosition(this.worldPosition);
-
 			// MP update pivot position
 			if ( scope.pivot ) {
 				scope.pivot.position.copy(scope.target);
-				scope.pivot.lookAt(this.worldPosition);
 			}
 
 			if ( scope.enableDamping === true ) {
@@ -570,11 +566,6 @@ THREE.OrbitControls = function ( object, domElement ) {
 
 		//console.log( 'handleMouseDownPan' );
 
-		// MP enable pivot visualization
-		if (scope.pivot) {
-			scope.pivotVisibleRoutine(true);
-		}
-
 		panStart.set( event.clientX, event.clientY );
 
 	}
@@ -645,7 +636,7 @@ THREE.OrbitControls = function ( object, domElement ) {
 		//console.log( 'handleMouseUp' );
 
 		// MP show pivot on pan start => this should be check with a centralized state change manager, to put this only one time and not for every xdown event
-		if (event.button === scope.mouseButtons.PAN) {
+		if (scope.pivot && scope.enablePan) {
 			scope.pivotVisibleRoutine(false);
 		}
 
@@ -843,13 +834,21 @@ THREE.OrbitControls = function ( object, domElement ) {
 				break;
 
 			case scope.mouseButtons.PAN:
+				// MP enable pivot visualization
+				if (scope.pivot) {
+					scope.pivotVisibleRoutine(true);
+				}
 
-				if ( scope.enablePan === false ) return;
-
+				if ( scope.enablePan === false ) {
+					if (scope.pivot) {
+						scope.pivotVisibleRoutine(false);
+					}
+					return;
+				}
 				handleMouseDownPan( event );
 
 				state = STATE.PAN;
-
+				
 				break;
 
 		}

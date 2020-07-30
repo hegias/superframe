@@ -60,6 +60,7 @@ AFRAME.registerComponent('orbit-controls', {
 
     // MP initialize pivotData to avoid wrong diff in update
     this.pivotData = null;
+    this.pivotRaycaster = undefined;
 
     document.body.style.cursor = 'grab';
 
@@ -120,8 +121,19 @@ AFRAME.registerComponent('orbit-controls', {
       el.setAttribute('look-controls', 'enabled', false);
     }
   },
-  onMouseDown() {	
-    document.body.style.cursor = 'grabbing';	
+  onMouseDown(evt) {	
+    // HACK to avoid event without button property
+    if (!(event instanceof MouseEvent)) {
+      return;
+    }
+    document.body.style.cursor = 'grabbing';
+    if (this.pivotRaycaster && evt.button === 2) { // right click
+      this.pivotRaycaster.components['raycaster'].checkIntersections();
+      if (this.pivotRaycaster.components['raycaster'].intersections && this.pivotRaycaster.components['raycaster'].intersections.length > 0) {
+        const firstValid = this.pivotRaycaster.components['raycaster'].intersections.find( (el) => el.object.isMesh === true );
+		    this.controls.target.copy(firstValid.point);
+      }
+    }
   },	
   onMouseUp() {	
     document.body.style.cursor = 'grab';
@@ -175,12 +187,33 @@ AFRAME.registerComponent('orbit-controls', {
 
     if (!AFRAME.utils.deepEqual(this.pivotData, this.data.pivot)) {
       this.pivotData = {...this.pivotData, ...this.data.pivot};
+      if (this.pivotData.placementSelector) {
+        // disable pan if raycaster is enabled
+        controls.enablePan = false;
+        if (this.pivotRaycaster === undefined) {
+          this.createRaycaster(this.pivotData.placementSelector);
+        }
+      }
       this.controls.setPivot(this.pivotData);
     }
   },
 
   setCustomPivot(pivot) {
     this.controls.setCustomPivot(pivot);
+  },
+
+  createRaycaster(query) {
+    this.pivotRaycaster = document.createElement('a-entity');
+    this.pivotRaycaster.setAttribute('cursor', 'rayOrigin: mouse');
+    this.pivotRaycaster.setAttribute('raycaster', `enabled: false; objects:${query}; interval: 200`);
+    this.el.appendChild(this.pivotRaycaster);
+  },
+
+  deleteRaycaster() {
+    if (this.pivotRaycaster) {
+      this.pivotRaycaster.parentNode.removeChild(this.pivotRaycaster);
+      this.pivotRaycaster = undefined;
+    }
   },
 
   tick: function () {
@@ -199,7 +232,7 @@ AFRAME.registerComponent('orbit-controls', {
   remove: function() {
     this.controls.reset();
     this.controls.dispose();
-
+    this.deleteRaycaster();
     this.removeEventListeners();
   }
 });
